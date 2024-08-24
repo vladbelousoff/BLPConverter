@@ -3,8 +3,7 @@ cmake_minimum_required(VERSION 3.5)
 project(BLPCONVERTER)
 
 # Hack for setting /W0 level instead of /W3 by default
-string(REGEX REPLACE "/W[3|4]" "/w" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-
+string(REGEX REPLACE "/W[0|3|4]" "/w" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
 ##########################################################################################
 # Options
@@ -72,6 +71,6 @@ else()
     target_link_libraries(BLPConverter freeimage squish)
 endif()
 
-set_target_properties(BLPConverter PROPERTIES COMPILE_DEFINITIONS "FREEIMAGE_LIB")
+set_target_properties(BLPConverter PROPERTIES COMPILE_DEFINITIONS "FREEIMAGE_LIB;_CRT_SECURE_NO_WARNINGS")
 
 install(TARGETS BLPConverter RUNTIME DESTINATION bin)
