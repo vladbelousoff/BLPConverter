@@ -75,7 +75,7 @@ enum tBLPFormat
 };
 
 
-MODULE_API tBLPInfos blp_processFile(FILE* pFile);
+MODULE_API tBLPInfos blp_process_file(FILE* pFile);
 MODULE_API void blp_release(tBLPInfos blpInfos);
 
 MODULE_API uint8_t blp_version(tBLPInfos blpInfos);
@@ -83,7 +83,7 @@ MODULE_API tBLPFormat blp_format(tBLPInfos blpInfos);
 
 MODULE_API unsigned int blp_width(tBLPInfos blpInfos, unsigned int mipLevel = 0);
 MODULE_API unsigned int blp_height(tBLPInfos blpInfos, unsigned int mipLevel = 0);
-MODULE_API unsigned int blp_nbMipLevels(tBLPInfos blpInfos);
+MODULE_API unsigned int blp_nb_mip_levels(tBLPInfos blpInfos);
 
 MODULE_API tBGRAPixel* blp_convert(FILE* pFile, tBLPInfos blpInfos, unsigned int mipLevel = 0);
 
@@ -91,6 +91,6 @@ MODULE_API tBGRAPixel* blp_convert(FILE* pFile, tBLPInfos blpInfos, unsigned int
 }
 #endif
 
-std::string blp_asString(tBLPFormat format);
+std::string blp_as_string(tBLPFormat format);
 
 #endif

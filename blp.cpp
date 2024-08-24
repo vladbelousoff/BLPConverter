@@ -19,7 +19,7 @@ tBGRAPixel* blp2_convert_raw_bgra(uint8_t* pSrc, tBLP2Header* pHeader, unsigned 
 tBGRAPixel* blp2_convert_dxt(uint8_t* pSrc, tBLP2Header* pHeader, unsigned int width, unsigned int height, int flags);
 
 
-tBLPInfos blp_processFile(FILE* pFile)
+tBLPInfos blp_process_file(FILE* pFile)
 {
     tInternalBLPInfos* pBLPInfos = new tInternalBLPInfos();
     char magic[4];
@@ -173,7 +173,7 @@ unsigned int blp_height(tBLPInfos blpInfos, unsigned int mipLevel)
 }
 
 
-unsigned int blp_nbMipLevels(tBLPInfos blpInfos)
+unsigned int blp_nb_mip_levels(tBLPInfos blpInfos)
 {
     tInternalBLPInfos* pBLPInfos = static_cast<tInternalBLPInfos*>(blpInfos);
 
@@ -275,7 +275,7 @@ tBGRAPixel* blp_convert(FILE* pFile, tBLPInfos blpInfos, unsigned int mipLevel)
 }
 
 
-std::string blp_asString(tBLPFormat format)
+std::string blp_as_string(tBLPFormat format)
 {
     switch (format)
     {

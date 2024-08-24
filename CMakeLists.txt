@@ -9,7 +9,7 @@ string(REGEX REPLACE "/W[3|4]" "/w" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 ##########################################################################################
 # Options
 
-option(WITH_LIBRARY "Compile library" OFF)
+option(WITH_LIBRARY "Compile library" ON)
 
 
 ##########################################################################################
@@ -37,14 +37,13 @@ set(LIBRARY_HEADERS blp.h blp_internal.h)
 
 
 ##########################################################################################
-# libblp shared library
+# libblp static library
 
 if (WITH_LIBRARY)
-    add_library(blp SHARED ${LIBRARY_SRCS} ${LIBRARY_HEADERS})
+    add_library(blp STATIC ${LIBRARY_SRCS} ${LIBRARY_HEADERS})
     target_link_libraries(blp freeimage squish)
 
     set_target_properties(blp PROPERTIES COMPILE_DEFINITIONS "FREEIMAGE_LIB"
-                                         COMPILE_FLAGS "-fPIC"
                                          BUILD_WITH_INSTALL_RPATH ON
                                          INSTALL_NAME_DIR "@rpath"
     )

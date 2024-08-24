@@ -61,9 +61,9 @@ void showInfos(const std::string& strFileName, tBLPInfos blpInfos)
     cout << endl
          << "Infos about '" << strFileName << "':" << endl
          << "  - Version:    BLP" << (int) blp_version(blpInfos) << endl
-         << "  - Format:     " << blp_asString(blp_format(blpInfos)) << endl
+         << "  - Format:     " << blp_as_string(blp_format(blpInfos)) << endl
          << "  - Dimensions: " << blp_width(blpInfos) << "x" << blp_height(blpInfos) << endl
-         << "  - Mip levels: " << blp_nbMipLevels(blpInfos) << endl
+         << "  - Mip levels: " << blp_nb_mip_levels(blpInfos) << endl
          << endl;
 }
 
@@ -130,7 +130,7 @@ int main(int argc, char** argv)
 
 
     // Process the files
-    for (unsigned int i = 0; i < args.FileCount(); ++i)
+    for (int i = 0; i < args.FileCount(); ++i)
     {
         ++nbImagesTotal;
 
@@ -148,7 +148,7 @@ int main(int argc, char** argv)
             continue;
         }
 
-        tBLPInfos blpInfos = blp_processFile(pFile);
+        tBLPInfos blpInfos = blp_process_file(pFile);
         if (!blpInfos)
         {
             cerr << "Failed to process the file '" << strInFileName << "'" << endl;
