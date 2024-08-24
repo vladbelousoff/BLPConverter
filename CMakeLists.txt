@@ -1,5 +1,9 @@
+cmake_minimum_required(VERSION 3.5)
+
 project(BLPCONVERTER)
-cmake_minimum_required(VERSION 2.6)
+
+# Hack for setting /W0 level instead of /W3 by default
+string(REGEX REPLACE "/W[3|4]" "/w" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
 
 ##########################################################################################
