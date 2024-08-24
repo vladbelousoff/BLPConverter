@@ -75,6 +75,7 @@ enum tBLPFormat
 };
 
 
+MODULE_API tBLPInfos blp_process_buffer(char* buffer);
 MODULE_API tBLPInfos blp_process_file(FILE* pFile);
 MODULE_API void blp_release(tBLPInfos blpInfos);
 

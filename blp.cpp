@@ -1,10 +1,11 @@
 #include "blp.h"
 #include "blp_internal.h"
-#include <squish.h>
-#include <FreeImage.h>
-#include <string.h>
-#include <memory.h>
 
+#include <FreeImage.h>
+#include <memory.h>
+#include <squish.h>
+#include <cstring>
+#include <vector>
 
 // Forward declaration of "internal" functions
 tBGRAPixel* blp1_convert_jpeg(uint8_t* pSrc, tBLP1Infos* pInfos, uint32_t size);
@@ -19,62 +20,78 @@ tBGRAPixel* blp2_convert_raw_bgra(uint8_t* pSrc, tBLP2Header* pHeader, unsigned 
 tBGRAPixel* blp2_convert_dxt(uint8_t* pSrc, tBLP2Header* pHeader, unsigned int width, unsigned int height, int flags);
 
 
-tBLPInfos blp_process_file(FILE* pFile)
+tBLPInfos blp_process_buffer(char *buffer)
 {
-    tInternalBLPInfos* pBLPInfos = new tInternalBLPInfos();
-    char magic[4];
+  unsigned int buffer_position;
 
-    fseek(pFile, 0, SEEK_SET);
-    fread((void*) magic, sizeof(uint8_t), 4, pFile);
+  auto* pBLPInfos = new tInternalBLPInfos();
+  char magic[4];
 
-    if (strncmp(magic, "BLP2", 4) == 0)
+  buffer_position = 0;
+  memcpy(&magic, &buffer[buffer_position], 4);
+
+  if (strncmp(magic, "BLP2", 4) == 0)
+  {
+    pBLPInfos->version = 2;
+
+    buffer_position = 0;
+    memcpy(&pBLPInfos->blp2, &buffer[buffer_position], sizeof(tBLP2Header));
+
+    pBLPInfos->blp2.nbMipLevels = 0;
+    while ((pBLPInfos->blp2.offsets[pBLPInfos->blp2.nbMipLevels] != 0) && (pBLPInfos->blp2.nbMipLevels < 16))
+      ++pBLPInfos->blp2.nbMipLevels;
+  }
+  else if (strncmp(magic, "BLP1", 4) == 0)
+  {
+    pBLPInfos->version = 1;
+
+    buffer_position = 0;
+    memcpy(&pBLPInfos->blp1.header, &buffer[buffer_position], sizeof(tBLP2Header));
+    buffer_position += sizeof(tBLP2Header);
+
+    pBLPInfos->blp1.infos.nbMipLevels = 0;
+    while ((pBLPInfos->blp1.header.offsets[pBLPInfos->blp1.infos.nbMipLevels] != 0) && (pBLPInfos->blp1.infos.nbMipLevels < 16))
+      ++pBLPInfos->blp1.infos.nbMipLevels;
+
+    if (pBLPInfos->blp1.header.type == 0)
     {
-        pBLPInfos->version = 2;
+      memcpy(&pBLPInfos->blp1.infos.jpeg.headerSize, &buffer[buffer_position], sizeof(uint32_t));
+      buffer_position += sizeof(uint32_t);
 
-        fseek(pFile, 0, SEEK_SET);
-        fread((void*) &pBLPInfos->blp2, sizeof(tBLP2Header), 1, pFile);
-
-        pBLPInfos->blp2.nbMipLevels = 0;
-        while ((pBLPInfos->blp2.offsets[pBLPInfos->blp2.nbMipLevels] != 0) && (pBLPInfos->blp2.nbMipLevels < 16))
-            ++pBLPInfos->blp2.nbMipLevels;
-    }
-    else if (strncmp(magic, "BLP1", 4) == 0)
-    {
-        pBLPInfos->version = 1;
-
-        fseek(pFile, 0, SEEK_SET);
-        fread((void*) &pBLPInfos->blp1.header, sizeof(tBLP1Header), 1, pFile);
-
-        pBLPInfos->blp1.infos.nbMipLevels = 0;
-        while ((pBLPInfos->blp1.header.offsets[pBLPInfos->blp1.infos.nbMipLevels] != 0) && (pBLPInfos->blp1.infos.nbMipLevels < 16))
-            ++pBLPInfos->blp1.infos.nbMipLevels;
-
-        if (pBLPInfos->blp1.header.type == 0)
-        {
-            fread((void*) &pBLPInfos->blp1.infos.jpeg.headerSize, sizeof(uint32_t), 1, pFile);
-
-            if (pBLPInfos->blp1.infos.jpeg.headerSize > 0)
-            {
-                pBLPInfos->blp1.infos.jpeg.header = new uint8_t[pBLPInfos->blp1.infos.jpeg.headerSize];
-                fread((void*) pBLPInfos->blp1.infos.jpeg.header, sizeof(uint8_t), pBLPInfos->blp1.infos.jpeg.headerSize, pFile);
-            }
-            else
-            {
-                pBLPInfos->blp1.infos.jpeg.header = 0;
-            }
-        }
-        else
-        {
-            fread((void*) &pBLPInfos->blp1.infos.palette, sizeof(pBLPInfos->blp1.infos.palette), 1, pFile);
-        }
+      if (pBLPInfos->blp1.infos.jpeg.headerSize > 0)
+      {
+        pBLPInfos->blp1.infos.jpeg.header = new uint8_t[pBLPInfos->blp1.infos.jpeg.headerSize];
+        memcpy(pBLPInfos->blp1.infos.jpeg.header, &buffer[buffer_position], pBLPInfos->blp1.infos.jpeg.headerSize);
+      }
+      else
+      {
+        pBLPInfos->blp1.infos.jpeg.header = nullptr;
+      }
     }
     else
     {
-        delete pBLPInfos;
-        return 0;
+      memcpy(&pBLPInfos->blp1.infos.palette, &buffer[buffer_position], sizeof(pBLPInfos->blp1.infos.palette));
     }
+  }
+  else
+  {
+    delete pBLPInfos;
+    return nullptr;
+  }
 
-    return (tBLPInfos) pBLPInfos;
+  return (tBLPInfos) pBLPInfos;
+}
+
+tBLPInfos blp_process_file(FILE* pFile)
+{
+    fseek(pFile, 0, SEEK_END);
+    auto size = ftell(pFile);
+    fseek(pFile, 0, SEEK_SET);
+
+    std::vector<char> buffer(size);
+    fread(buffer.data(), 1, size, pFile);
+
+    return blp_process_buffer(buffer.data());
 }
 
 
