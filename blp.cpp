@@ -20,7 +20,7 @@ tBGRAPixel* blp2_convert_raw_bgra(uint8_t* pSrc, tBLP2Header* pHeader, unsigned 
 tBGRAPixel* blp2_convert_dxt(uint8_t* pSrc, tBLP2Header* pHeader, unsigned int width, unsigned int height, int flags);
 
 
-tBLPInfos blp_process_buffer(char *buffer)
+tBLPInfos blp_process_buffer(const char* buffer)
 {
   unsigned int buffer_position;
 
@@ -188,7 +188,7 @@ unsigned int blp_nb_mip_levels(tBLPInfos blpInfos)
 }
 
 
-tBGRAPixel *blp_convert_buffer(char *buffer, tBLPInfos blpInfos, unsigned int mipLevel)
+tBGRAPixel *blp_convert_buffer(const char* buffer, tBLPInfos blpInfos, unsigned int mipLevel)
 {
   auto* pBLPInfos = static_cast<tInternalBLPInfos*>(blpInfos);
 
