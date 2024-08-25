@@ -1,10 +1,10 @@
 #include "blp.h"
-#include <SimpleOpt.h>
 #include <FreeImage.h>
-#include <memory.h>
+#include <SimpleOpt.h>
 #include <iostream>
+#include <memory.h>
 #include <string>
-
+#include <vector>
 
 using namespace std;
 
@@ -148,7 +148,14 @@ int main(int argc, char** argv)
             continue;
         }
 
-        tBLPInfos blpInfos = blp_process_file(pFile);
+        fseek(pFile, 0, SEEK_END);
+        auto size = ftell(pFile);
+        fseek(pFile, 0, SEEK_SET);
+
+        std::vector<char> buffer(size);
+        fread(buffer.data(), 1, size, pFile);
+
+        tBLPInfos blpInfos = blp_process_buffer(buffer.data());
         if (!blpInfos)
         {
             cerr << "Failed to process the file '" << strInFileName << "'" << endl;
@@ -158,18 +165,18 @@ int main(int argc, char** argv)
 
         if (!bInfos)
         {
-            tBGRAPixel* pData = blp_convert(pFile, blpInfos, mipLevel);
+            tBGRAPixel* pData = blp_convert_buffer(buffer.data(), blpInfos, mipLevel);
             if (pData)
             {
                 unsigned int width = blp_width(blpInfos, mipLevel);
                 unsigned int height = blp_height(blpInfos, mipLevel);
 
-                FIBITMAP* pImage = FreeImage_Allocate(width, height, 32, 0x000000FF, 0x0000FF00, 0x00FF0000);
+                FIBITMAP* pImage = FreeImage_Allocate((int)width, (int)height, 32, 0x000000FF, 0x0000FF00, 0x00FF0000);
                 if (pImage)
                 {
                     tBGRAPixel* pSrc = pData + (height - 1) * width;
 
-                    for (unsigned int y = 0; y < height; ++y)
+                    for (int y = 0; y < height; ++y)
                     {
                         BYTE* pLine = FreeImage_GetScanLine(pImage, y);
                         memcpy(pLine, pSrc, width * sizeof(tBGRAPixel));

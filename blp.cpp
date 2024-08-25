@@ -82,19 +82,6 @@ tBLPInfos blp_process_buffer(char *buffer)
   return (tBLPInfos) pBLPInfos;
 }
 
-tBLPInfos blp_process_file(FILE* pFile)
-{
-    fseek(pFile, 0, SEEK_END);
-    auto size = ftell(pFile);
-    fseek(pFile, 0, SEEK_SET);
-
-    std::vector<char> buffer(size);
-    fread(buffer.data(), 1, size, pFile);
-
-    return blp_process_buffer(buffer.data());
-}
-
-
 void blp_release(tBLPInfos blpInfos)
 {
     tInternalBLPInfos* pBLPInfos = static_cast<tInternalBLPInfos*>(blpInfos);
@@ -201,96 +188,92 @@ unsigned int blp_nb_mip_levels(tBLPInfos blpInfos)
 }
 
 
-tBGRAPixel* blp_convert(FILE* pFile, tBLPInfos blpInfos, unsigned int mipLevel)
+tBGRAPixel *blp_convert_buffer(char *buffer, tBLPInfos blpInfos, unsigned int mipLevel)
 {
-    tInternalBLPInfos* pBLPInfos = static_cast<tInternalBLPInfos*>(blpInfos);
+  auto* pBLPInfos = static_cast<tInternalBLPInfos*>(blpInfos);
 
-    // Check the mip level
+  // Check the mip level
+  if (pBLPInfos->version == 2)
+  {
+    if (mipLevel >= pBLPInfos->blp2.nbMipLevels)
+      mipLevel = pBLPInfos->blp2.nbMipLevels - 1;
+  }
+  else
+  {
+    if (mipLevel >= pBLPInfos->blp1.infos.nbMipLevels)
+      mipLevel = pBLPInfos->blp1.infos.nbMipLevels - 1;
+  }
+
+  // Declarations
+  unsigned int width  = blp_width(pBLPInfos, mipLevel);
+  unsigned int height = blp_height(pBLPInfos, mipLevel);
+  tBGRAPixel* pDst    = 0;
+  uint8_t* pSrc       = 0;
+  uint32_t offset;
+  uint32_t size;
+
+  if (pBLPInfos->version == 2)
+  {
+    offset = pBLPInfos->blp2.offsets[mipLevel];
+    size   = pBLPInfos->blp2.lengths[mipLevel];
+  }
+  else
+  {
+    offset = pBLPInfos->blp1.header.offsets[mipLevel];
+    size   = pBLPInfos->blp1.header.lengths[mipLevel];
+  }
+
+  pSrc = new uint8_t[size];
+  memcpy(pSrc, &buffer[offset], size);
+
+  switch (blp_format(pBLPInfos))
+  {
+  case BLP_FORMAT_JPEG:
+    // if (pBLPInfos->version == 2)
+    //     pDst = blp2_convert_paletted_no_alpha(pSrc, &pBLPInfos->blp2, width, height);
+    // else
+    pDst = blp1_convert_jpeg(pSrc, &pBLPInfos->blp1.infos, size);
+    break;
+
+  case BLP_FORMAT_PALETTED_NO_ALPHA:
+    if (pBLPInfos->version == 2)
+      pDst = blp2_convert_paletted_no_alpha(pSrc, &pBLPInfos->blp2, width, height);
+    else
+      pDst = blp1_convert_paletted_no_alpha(pSrc, &pBLPInfos->blp1.infos, width, height);
+    break;
+
+  case BLP_FORMAT_PALETTED_ALPHA_1:  pDst = blp2_convert_paletted_alpha1(pSrc, &pBLPInfos->blp2, width, height); break;
+
+  case BLP_FORMAT_PALETTED_ALPHA_4:  pDst = blp2_convert_paletted_alpha4(pSrc, &pBLPInfos->blp2, width, height); break;
+
+  case BLP_FORMAT_PALETTED_ALPHA_8:
     if (pBLPInfos->version == 2)
     {
-        if (mipLevel >= pBLPInfos->blp2.nbMipLevels)
-            mipLevel = pBLPInfos->blp2.nbMipLevels - 1;
+      pDst = blp2_convert_paletted_alpha8(pSrc, &pBLPInfos->blp2, width, height);
     }
     else
     {
-        if (mipLevel >= pBLPInfos->blp1.infos.nbMipLevels)
-            mipLevel = pBLPInfos->blp1.infos.nbMipLevels - 1;
+      if (pBLPInfos->blp1.header.alphaEncoding == 5)
+        pDst = blp1_convert_paletted_alpha(pSrc, &pBLPInfos->blp1.infos, width, height);
+      else
+        pDst = blp1_convert_paletted_separated_alpha(pSrc, &pBLPInfos->blp1.infos, width, height);
     }
+    break;
 
-    // Declarations
-    unsigned int width  = blp_width(pBLPInfos, mipLevel);
-    unsigned int height = blp_height(pBLPInfos, mipLevel);
-    tBGRAPixel* pDst    = 0;
-    uint8_t* pSrc       = 0;
-    uint32_t offset;
-    uint32_t size;
+  case BLP_FORMAT_RAW_BGRA: pDst = blp2_convert_raw_bgra(pSrc, &pBLPInfos->blp2, width, height); break;
 
-    if (pBLPInfos->version == 2)
-    {
-        offset = pBLPInfos->blp2.offsets[mipLevel];
-        size   = pBLPInfos->blp2.lengths[mipLevel];
-    }
-    else
-    {
-        offset = pBLPInfos->blp1.header.offsets[mipLevel];
-        size   = pBLPInfos->blp1.header.lengths[mipLevel];
-    }
+  case BLP_FORMAT_DXT1_NO_ALPHA:
+  case BLP_FORMAT_DXT1_ALPHA_1:      pDst = blp2_convert_dxt(pSrc, &pBLPInfos->blp2, width, height, squish::kDxt1); break;
+  case BLP_FORMAT_DXT3_ALPHA_4:
+  case BLP_FORMAT_DXT3_ALPHA_8:      pDst = blp2_convert_dxt(pSrc, &pBLPInfos->blp2, width, height, squish::kDxt3); break;
+  case BLP_FORMAT_DXT5_ALPHA_8:      pDst = blp2_convert_dxt(pSrc, &pBLPInfos->blp2, width, height, squish::kDxt5); break;
+  default:                           break;
+  }
 
-    pSrc = new uint8_t[size];
+  delete[] pSrc;
 
-    // Read the data from the file
-    fseek(pFile, offset, SEEK_SET);
-    fread((void*) pSrc, sizeof(uint8_t), size, pFile);
-
-    switch (blp_format(pBLPInfos))
-    {
-        case BLP_FORMAT_JPEG:
-            // if (pBLPInfos->version == 2)
-            //     pDst = blp2_convert_paletted_no_alpha(pSrc, &pBLPInfos->blp2, width, height);
-            // else
-                pDst = blp1_convert_jpeg(pSrc, &pBLPInfos->blp1.infos, size);
-            break;
-
-        case BLP_FORMAT_PALETTED_NO_ALPHA:
-            if (pBLPInfos->version == 2)
-                pDst = blp2_convert_paletted_no_alpha(pSrc, &pBLPInfos->blp2, width, height);
-            else
-                pDst = blp1_convert_paletted_no_alpha(pSrc, &pBLPInfos->blp1.infos, width, height);
-            break;
-
-        case BLP_FORMAT_PALETTED_ALPHA_1:  pDst = blp2_convert_paletted_alpha1(pSrc, &pBLPInfos->blp2, width, height); break;
-
-        case BLP_FORMAT_PALETTED_ALPHA_4:  pDst = blp2_convert_paletted_alpha4(pSrc, &pBLPInfos->blp2, width, height); break;
-
-        case BLP_FORMAT_PALETTED_ALPHA_8:
-            if (pBLPInfos->version == 2)
-            {
-                pDst = blp2_convert_paletted_alpha8(pSrc, &pBLPInfos->blp2, width, height);
-            }
-            else
-            {
-                if (pBLPInfos->blp1.header.alphaEncoding == 5)
-                    pDst = blp1_convert_paletted_alpha(pSrc, &pBLPInfos->blp1.infos, width, height);
-                else
-                    pDst = blp1_convert_paletted_separated_alpha(pSrc, &pBLPInfos->blp1.infos, width, height);
-            }
-            break;
-
-        case BLP_FORMAT_RAW_BGRA: pDst = blp2_convert_raw_bgra(pSrc, &pBLPInfos->blp2, width, height); break;
-
-        case BLP_FORMAT_DXT1_NO_ALPHA:
-        case BLP_FORMAT_DXT1_ALPHA_1:      pDst = blp2_convert_dxt(pSrc, &pBLPInfos->blp2, width, height, squish::kDxt1); break;
-        case BLP_FORMAT_DXT3_ALPHA_4:
-        case BLP_FORMAT_DXT3_ALPHA_8:      pDst = blp2_convert_dxt(pSrc, &pBLPInfos->blp2, width, height, squish::kDxt3); break;
-        case BLP_FORMAT_DXT5_ALPHA_8:      pDst = blp2_convert_dxt(pSrc, &pBLPInfos->blp2, width, height, squish::kDxt5); break;
-        default:                           break;
-    }
-
-    delete[] pSrc;
-
-    return pDst;
+  return pDst;
 }
-
 
 std::string blp_as_string(tBLPFormat format)
 {

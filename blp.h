@@ -1,8 +1,8 @@
 #ifndef _BLP_H_
 #define _BLP_H_
 
-#include <stdint.h>
-#include <stdio.h>
+#include <cstdint>
+#include <cstdio>
 #include <string>
 
 #ifdef __cplusplus
@@ -76,7 +76,6 @@ enum tBLPFormat
 
 
 MODULE_API tBLPInfos blp_process_buffer(char* buffer);
-MODULE_API tBLPInfos blp_process_file(FILE* pFile);
 MODULE_API void blp_release(tBLPInfos blpInfos);
 
 MODULE_API uint8_t blp_version(tBLPInfos blpInfos);
@@ -86,7 +85,7 @@ MODULE_API unsigned int blp_width(tBLPInfos blpInfos, unsigned int mipLevel = 0)
 MODULE_API unsigned int blp_height(tBLPInfos blpInfos, unsigned int mipLevel = 0);
 MODULE_API unsigned int blp_nb_mip_levels(tBLPInfos blpInfos);
 
-MODULE_API tBGRAPixel* blp_convert(FILE* pFile, tBLPInfos blpInfos, unsigned int mipLevel = 0);
+MODULE_API tBGRAPixel* blp_convert_buffer(char* buffer, tBLPInfos blpInfos, unsigned int mipLevel = 0);
 
 #ifdef __cplusplus
 }
