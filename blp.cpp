@@ -1,7 +1,9 @@
 #include "blp.h"
 #include "blp_internal.h"
 
-#include <FreeImage.h>
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
+
 #include <memory.h>
 #include <squish.h>
 #include <cstring>
@@ -297,43 +299,42 @@ std::string blp_as_string(tBLPFormat format)
 
 tBGRAPixel* blp1_convert_jpeg(uint8_t* pSrc, tBLP1Infos* pInfos, uint32_t size)
 {
-    uint8_t* pSrcBuffer = new uint8_t[pInfos->jpeg.headerSize + size];
+    auto* pSrcBuffer = new uint8_t[pInfos->jpeg.headerSize + size];
 
     memcpy(pSrcBuffer, pInfos->jpeg.header, pInfos->jpeg.headerSize);
     memcpy(pSrcBuffer + pInfos->jpeg.headerSize, pSrc, size);
 
-    FIMEMORY* pMemory = FreeImage_OpenMemory(pSrcBuffer, pInfos->jpeg.headerSize + size);
+    // Load the JPEG image data from the buffer
+    int width, height, channels;
+    stbi_uc* pImageData = stbi_load_from_memory(pSrcBuffer, pInfos->jpeg.headerSize + size, &width, &height, &channels, 3);
 
-    FIBITMAP* pBitmap = FreeImage_LoadFromMemory(FIF_JPEG, pMemory);
+    delete[] pSrcBuffer; // Free the buffer used to hold the JPEG data and header
 
-    unsigned int width = FreeImage_GetWidth(pBitmap);
-    unsigned int height = FreeImage_GetHeight(pBitmap);
-    unsigned int bytespp = FreeImage_GetLine(pBitmap) / FreeImage_GetWidth(pBitmap);
-
-
-    tBGRAPixel* pBuffer = new tBGRAPixel[width * height];
-    tBGRAPixel* pDst = pBuffer;
-
-    for (unsigned int y = 0; y < height; ++y)
-    {
-        BYTE* pSrc2 = FreeImage_GetScanLine(pBitmap, height - y - 1);
-
-        for (unsigned int x = 0; x < width; ++x)
-        {
-            // R and B are inverted in the JPEG file
-            pDst->r = pSrc2[FI_RGBA_BLUE];
-            pDst->g = pSrc2[FI_RGBA_GREEN];
-            pDst->b = pSrc2[FI_RGBA_RED];
-            pDst->a = 0xFF;
-
-            ++pDst;
-            pSrc2 += bytespp;
-        }
+    if (pImageData == nullptr) {
+      // Handle error
+      return nullptr;
     }
 
-    FreeImage_Unload(pBitmap);
+    // Allocate memory for the output BGRAPixel buffer
+    auto* pBuffer = new tBGRAPixel[width * height];
+    tBGRAPixel* pDst = pBuffer;
 
-    FreeImage_CloseMemory(pMemory);
+    // Convert image data from RGB to BGRA
+    for (int y = 0; y < height; ++y)
+    {
+      for (int x = 0; x < width; ++x)
+      {
+        int index = (y * width + x) * 3; // RGB is packed in 3 channels
+        pDst->b = pImageData[index];
+        pDst->g = pImageData[index + 1];
+        pDst->r = pImageData[index + 2];
+        pDst->a = 0xFF;
+
+        ++pDst;
+      }
+    }
+
+    stbi_image_free(pImageData); // Free the image data allocated by stb_image
 
     return pBuffer;
 }

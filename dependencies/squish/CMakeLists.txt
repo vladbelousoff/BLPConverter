@@ -15,10 +15,3 @@ include_directories(.)
 
 # Declaration of the library
 add_library(squish STATIC ${SRCS})
-
-# Compilation settings
-if (NOT WIN32)
-    target_compile_options(squish PRIVATE -w -fPIC)
-else()
-    target_compile_options(squish PRIVATE /W0)
-endif()
