@@ -11,19 +11,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Optional: Disable compiler-specific extensions
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Suppress all warnings
-if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-    # Remove any existing /W flags (like /W3)
-    string(REGEX REPLACE "/W[0-4]" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-    string(REGEX REPLACE "/w" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-    # Add the /w flag to suppress all warnings
-    add_compile_options(/w)
-endif()
-
-if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GCC")
-    add_compile_options(-w)
-endif()
-
 ##########################################################################################
 # Options
 
